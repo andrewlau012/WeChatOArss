@@ -45,7 +45,28 @@ func (h *Handler) GetLoginQRCode(c *gin.Context) {
 		"data": gin.H{
 			"isLogin": qrCode.IsLogin,
 			"qrcode":  qrCode.QRCode,
+			"uuid":    qrCode.UUID,
 		},
+	})
+}
+
+func (h *Handler) GetLoginStatus(c *gin.Context) {
+	uuid := c.Query("uuid")
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, model.APIResponse{Err: "uuid is required"})
+		return
+	}
+
+	status, err := h.wechatSvc.CheckLoginStatus(uuid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.APIResponse{Err: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"err":    "",
+		"code":   status.Code,
+		"redir_url": status.RedirectURL,
 	})
 }
 
@@ -118,7 +139,7 @@ func (h *Handler) AddChannel(c *gin.Context) {
 		return
 	}
 
-	link, err := h.fetcherSvc.AddChannel(bizID)
+	_, err := h.fetcherSvc.AddChannel(bizID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Err: err.Error()})
 		return
@@ -142,7 +163,7 @@ func (h *Handler) AddChannelByURL(c *gin.Context) {
 		return
 	}
 
-	link, err := h.fetcherSvc.AddChannelByURL(articleURL)
+	_, err := h.fetcherSvc.AddChannelByURL(articleURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.APIResponse{Err: err.Error()})
 		return
@@ -438,6 +459,15 @@ func (h *Handler) GetRSSFeed(c *gin.Context) {
 		return
 	}
 
+	// Check format from path extension
+	format := "xml"
+	if strings.HasSuffix(bizID, ".json") {
+		format = "json"
+		bizID = strings.TrimSuffix(bizID, ".json")
+	} else if strings.HasSuffix(bizID, ".xml") {
+		bizID = strings.TrimSuffix(bizID, ".xml")
+	}
+
 	// Parse biz_id (handle encrypted)
 	bizID = h.fetcherSvc.ParseBizID(bizID)
 
@@ -461,6 +491,14 @@ func (h *Handler) GetRSSFeed(c *gin.Context) {
 	host := viper.GetString("rss.host")
 	if host == "" {
 		host = "http://localhost:8080"
+	}
+
+	// Return JSON if requested
+	if format == "json" {
+		jsonFeed := h.buildJSONFeed(channel.Name, channel.Description, channel.Link, host+"/feed/"+bizID+".json", articles)
+		c.Header("Content-Type", "application/json; charset=utf-8")
+		c.JSON(http.StatusOK, jsonFeed)
+		return
 	}
 
 	rss := h.buildRSS(channel.Name, channel.Description, channel.Link, host+"/feed/"+bizID, articles, host)
@@ -508,6 +546,13 @@ func (h *Handler) GetRSSFeedJSON(c *gin.Context) {
 }
 
 func (h *Handler) GetRSSAll(c *gin.Context) {
+	// Check format from path
+	path := c.Request.URL.Path
+	format := "xml"
+	if strings.HasSuffix(path, ".json") {
+		format = "json"
+	}
+
 	maxItems := viper.GetInt("rss.max_item_count")
 	if maxItems == 0 {
 		maxItems = 50
@@ -530,6 +575,14 @@ func (h *Handler) GetRSSAll(c *gin.Context) {
 		if err == nil && ch != nil {
 			articles[i].ChannelName = ch.Name
 		}
+	}
+
+	// Return JSON if requested
+	if format == "json" {
+		jsonFeed := h.buildJSONFeed("WeChatOArss All", "All subscribed channels", "", host+"/feed/all.json", articles)
+		c.Header("Content-Type", "application/json; charset=utf-8")
+		c.JSON(http.StatusOK, jsonFeed)
+		return
 	}
 
 	rss := h.buildRSS("WeChatOArss All", "All subscribed channels", "", host+"/feed/all.xml", articles, host)

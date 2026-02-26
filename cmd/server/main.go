@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -90,24 +90,43 @@ func setupRouter(wechatSvc *service.WechatService, fetcherSvc *service.FetcherSe
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	// Get executable directory for static files
+	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	webDist := filepath.Join(execDir, "web", "dist")
+
+	// Fallback to current directory if not found
+	if _, err := os.Stat(webDist); err != nil {
+		webDist = "./web/dist"
+	}
+
+	log.Printf("Serving static files from: %s", webDist)
+
 	// CORS configuration
 	router.Use(corsMiddleware())
 
 	// Serve static files
-	router.Static("/static", "./web/dist/static")
-	router.StaticFile("/", "./web/dist/index.html")
-	router.StaticFile("/favicon.ico", "./web/dist/favicon.ico")
+	router.Static("/assets", filepath.Join(webDist, "assets"))
+	router.StaticFile("/favicon.ico", filepath.Join(webDist, "favicon.ico"))
+	router.StaticFile("/favicon.svg", filepath.Join(webDist, "favicon.svg"))
+
+	// SPA fallback - serve index.html for all other routes
+	router.NoRoute(func(c *gin.Context) {
+		c.File(filepath.Join(webDist, "index.html"))
+	})
 
 	// Initialize handlers
 	h := handler.NewHandler(wechatSvc, fetcherSvc)
+
+	// Login routes (no auth required) - must be before /api group
+	router.GET("/login/new", h.GetLoginQRCode)
+	router.POST("/login/code", h.SubmitLoginCode)
+	router.GET("/login/status", h.GetLoginStatus)
 
 	// API routes (require auth)
 	api := router.Group("/api")
 	api.Use(authMiddleware())
 	{
 		// Account management
-		api.GET("/login/new", h.GetLoginQRCode)
-		api.POST("/login/code", h.SubmitLoginCode)
 		api.GET("/login/list", h.ListAccounts)
 		api.POST("/login/refresh/:id", h.RefreshAccountStatus)
 		api.DELETE("/login/del/:id", h.DeleteAccount)
@@ -131,21 +150,11 @@ func setupRouter(wechatSvc *service.WechatService, fetcherSvc *service.FetcherSe
 		api.GET("/opml", h.ExportOPML)
 	}
 
-	// RSS routes (public)
+	// RSS routes (public) - using query param for format
 	rss := router.Group("")
 	{
-		rss.GET("/feed/:id.xml", h.GetRSSFeed)
-		rss.GET("/feed/:id.json", h.GetRSSFeedJSON)
-		rss.GET("/feed/all.xml", h.GetRSSAll)
-		rss.GET("/feed/all.json", h.GetRSSAllJSON)
-	}
-
-	// Protected RSS routes
-	protectedRss := router.Group("/feed")
-	protectedRss.Use(authMiddleware())
-	{
-		protectedRss.GET("/all.xml", h.GetRSSAll)
-		protectedRss.GET("/all.json", h.GetRSSAllJSON)
+		rss.GET("/feed/:id", h.GetRSSFeed)
+		rss.GET("/feed/all", h.GetRSSAll)
 	}
 
 	// Proxy routes

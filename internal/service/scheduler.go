@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-
-	"wechatoarss/internal/store"
 )
 
 type SchedulerService struct {

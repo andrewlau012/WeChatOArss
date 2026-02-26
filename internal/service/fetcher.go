@@ -3,9 +3,10 @@ package service
 import (
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"wechatoarss/internal/model"
 	"wechatoarss/internal/store"
@@ -26,10 +27,11 @@ func (s *FetcherService) FetchChannel(bizID string) error {
 	log.Printf("Fetching channel: %s", bizID)
 
 	// Get channel info
-	channel, err := store.GetChannelByBizID(bizID)
+	ch, err := store.GetChannelByBizID(bizID)
 	if err != nil {
 		return err
 	}
+	_ = ch // use the channel
 
 	// Get articles
 	articles, err := s.wechatSvc.GetArticles(bizID, 0, 20)
@@ -255,8 +257,4 @@ func (s *FetcherService) ParseBizID(id string) string {
 func (s *FetcherService) IsValidBizID(bizID string) bool {
 	_, err := store.GetChannelByBizID(bizID)
 	return err == nil
-}
-
-func init() {
-	strconv.IntSize = 64
 }

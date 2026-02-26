@@ -11,7 +11,8 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home
+    component: Home,
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
@@ -21,22 +22,26 @@ const routes = [
   {
     path: '/channels',
     name: 'Channels',
-    component: Channels
+    component: Channels,
+    meta: { requiresAuth: true }
   },
   {
     path: '/channel/:id',
     name: 'ChannelDetail',
-    component: ChannelDetail
+    component: ChannelDetail,
+    meta: { requiresAuth: true }
   },
   {
     path: '/article/:id',
     name: 'Article',
-    component: Article
+    component: Article,
+    meta: { requiresAuth: true }
   },
   {
     path: '/settings',
     name: 'Settings',
-    component: Settings
+    component: Settings,
+    meta: { requiresAuth: true }
   },
   {
     path: '/about',
@@ -48,6 +53,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// Navigation guard
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  
+  // If route requires auth and no token, redirect to login
+  if (to.meta.requiresAuth && !token) {
+    next({ name: 'Login' })
+  } 
+  // If already logged in and trying to access login, redirect to home
+  else if (to.name === 'Login' && token) {
+    next({ name: 'Home' })
+  }
+  else {
+    next()
+  }
 })
 
 export default router
