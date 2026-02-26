@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  wechatoarss:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: wechatoarss:latest
+    container_name: wechatoarss
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - RSS_HOST=192.168.1.100:8080
+      - RSS_TOKEN=your_secure_token_here
+      - SCHEDULER_TIMES=07:00,12:00,20:00
+      - RSS_MAX_ITEM_COUNT=20
+      - RSS_KEEP_OLD_COUNT=50
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  default:
+    name: wechatoarss-network
