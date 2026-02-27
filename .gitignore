@@ -21,3 +21,4 @@ npm-debug.log*
 # Data
 data/
 *.sqlite
+/WeChatOA2Rss
