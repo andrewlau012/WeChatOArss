@@ -1,23 +1,52 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/server
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
+# Test binary
+*.test
 
-# Node
-node_modules/
-dist/
-npm-debug.log*
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
 
 # IDE
-.vscode/
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# System
+# OS
 .DS_Store
+Thumbs.db
+
+# Build output
+web/dist/
+web/node_modules/
 
 # Data
 data/
-*.sqlite
+*.db
+*.db-shm
+*.db-wal
+
+# Config (keep config.yaml.example)
+config.yaml
+config.local.yaml
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local

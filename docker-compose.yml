@@ -1,24 +1,23 @@
-
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
-    container_name: wechat_rss_backend
-    restart: always
+  wechatoarss:
+    image: alpine:3.19
+    container_name: wechatoarss
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache ca-certificates tzdata wget &&
+             mkdir -p /app/data /app/web/dist &&
+             wget -O server https://github.com/andrewlau012/WeChatOArss/releases/latest/download/server &&
+             chmod +x server &&
+             ./server"
+    ports:
+      - "8080:8080"
     volumes:
       - ./data:/app/data
+      - ./web/dist:/app/web/dist:ro
     environment:
-      - DATABASE_URL=sqlite:////app/data/db.sqlite
-      - TZ=Asia/Shanghai
-    ports:
-      - "8000:8000"
-
-  frontend:
-    build: ./frontend
-    container_name: wechat_rss_frontend
-    restart: always
-    ports:
-      - "18080:80"
-    depends_on:
-      - backend
+      - RSS_HOST=192.168.1.100:8080
+      - RSS_TOKEN=your_secure_token_here
+      - SCHEDULER_TIMES=07:00,12:00,20:00
+    restart: unless-stopped

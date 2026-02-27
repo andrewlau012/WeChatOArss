@@ -1,26 +1,105 @@
-# WeChat Official Account to RSS (WeChatOA2Rss)
+# WeChatOArss
 
-> 一个长期稳定、低成本、支持私有化部署的微信公众号 RSS 生成服务。
+微信公众号RSS服务 - 长期稳定可用的自部署方案
 
-## 项目简介
-本项目旨在为开发者提供一个可控的微信公众号订阅工具。通过模拟微信读书 (WeRead) 网页版登录，安全地获取关注列表更新，并生成标准 RSS Feed。
+## 特性
 
-## 核心特性
-- **私有部署**：数据完全掌握在自己手中，支持 Docker 一键部署。
-- **稳定可靠**：基于真实用户登录凭证，模拟正常阅读行为，极大降低风控概率。
-- **全文输出**：支持解析文章正文，提供沉浸式阅读体验。
-- **多账号轮换**：支持配置多个微信账号轮询抓取，分摊请求压力。
-- **定时更新**：每日 08:15 和 12:30 自动执行抓取任务。
-
-## 目录结构
-- `00_Preparation_Guide.md`: 部署前的准备工作与环境要求。
-- `01_Product_Requirements_Document.md`: 详细的产品需求文档 (PRD)。
-- `02_Technical_Architecture.md`: 技术架构设计与核心流程。
-- `03_API_Specification.md`: 后端接口规范文档。
-- `04_Frontend_Design.md`: 前端页面设计文档。
+- ✅ 微信扫码登录
+- ✅ 公众号搜索订阅
+- ✅ 标准RSS输出（RSS 2.0 / JSON Feed）
+- ✅ Web阅读界面
+- ✅ Docker一键部署
+- ✅ 数据本地存储
 
 ## 快速开始
-请参考 `00_Preparation_Guide.md` 进行 Docker 部署。
 
-## 声明
-本项目仅供学习与个人使用，请勿用于大规模商业爬虫或非法用途。使用本工具产生的任何后果由使用者自行承担。
+### 1. 下载项目
+
+```bash
+git clone https://github.com/yourrepo/WeChatOArss.git
+cd WeChatOArss
+```
+
+### 2. 配置环境
+
+复制配置文件并修改 Token：
+
+```bash
+cp config/config.yaml config.yaml
+# 编辑 config.yaml，修改 RSS_TOKEN
+```
+
+### 3. 启动服务
+
+```bash
+docker-compose up -d
+```
+
+### 4. 访问服务
+
+- Web界面: http://localhost:8080
+- API版本: http://localhost:8080/version
+
+## 使用说明
+
+### 登录
+
+首次访问会显示微信登录二维码，请使用微信扫码登录。
+
+### 添加公众号
+
+1. 进入"公众号"页面
+2. 点击"添加公众号"
+3. 可以通过文章链接或名称搜索添加
+
+### RSS订阅
+
+每个公众号都有独立的RSS地址：
+- XML格式: `/feed/{biz_id}.xml`
+- JSON格式: `/feed/{biz_id}.json`
+
+全量订阅：
+- `/feed/all.xml`
+- `/feed/all.json`
+
+## 配置说明
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| RSS_HOST | 服务地址（用于生成RSS链接） | localhost:8080 |
+| RSS_TOKEN | API访问密码 | - |
+| SCHEDULER_TIMES | 定时抓取时间 | 07:00,12:00,20:00 |
+| RSS_MAX_ITEM_COUNT | RSS最大文章数 | 20 |
+
+## 目录结构
+
+```
+WeChatOArss/
+├── cmd/server/          # Go后端入口
+├── internal/            # 内部包
+│   ├── config/          # 配置管理
+│   ├── handler/         # HTTP处理器
+│   ├── model/           # 数据模型
+│   ├── service/         # 业务逻辑
+│   └── store/           # 数据库
+├── web/                 # Vue3前端
+│   ├── src/
+│   │   ├── views/      # 页面组件
+│   │   ├── router/      # 路由
+│   │   └── assets/      # 静态资源
+│   └── dist/            # 构建输出
+├── config/             # 配置文件
+├── docker/             # Docker配置
+└── docker-compose.yml  # Docker编排
+```
+
+## 技术栈
+
+- **后端**: Go + Gin
+- **数据库**: SQLite
+- **前端**: Vue 3 + Vite
+- **部署**: Docker + Docker Compose
+
+## 许可证
+
+MIT License
