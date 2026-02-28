@@ -39,3 +39,7 @@ class Article(SQLModel, table=True):
     pub_date: datetime
     author: Optional[str] = None
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SystemConfig(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str

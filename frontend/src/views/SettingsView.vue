@@ -14,17 +14,40 @@
         <n-data-table :columns="columns" :data="accounts" :loading="loading" />
       </n-tab-pane>
       <n-tab-pane name="config" tab="抓取配置">
-        <n-form>
-           <n-form-item label="Cron 表达式">
-             <n-input value="15 8 * * *, 30 12 * * *" />
+        <n-form label-placement="left" label-width="120px">
+           <n-form-item label="抓取时间">
+             <div class="time-list">
+               <div v-for="(_time, index) in config.cron_times" :key="index" class="time-item">
+                 <span class="index-label">{{ index + 1 }}</span>
+                 <n-time-picker 
+                    v-model:formatted-value="config.cron_times[index]" 
+                    value-format="HH:mm" 
+                    format="HH:mm" 
+                    placeholder="选择时间" 
+                    :actions="['confirm']"
+                 />
+                 <n-button circle type="error" size="small" @click="removeTime(index)" v-if="config.cron_times.length > 1">
+                   -
+                 </n-button>
+               </div>
+               <n-button dashed type="primary" @click="addTime" class="add-time-btn">
+                 + 添加时间
+               </n-button>
+             </div>
            </n-form-item>
+           
            <n-form-item label="RSS 最大条目数">
-             <n-input-number :value="20" />
+             <n-input-number v-model:value="config.rss_max_items" :min="1" />
+             <span class="tip">单次最大数量</span>
            </n-form-item>
+           
            <n-form-item label="数据保留天数">
-             <n-input-number :value="60" />
+             <n-input-number v-model:value="config.retention_days" :min="1" />
            </n-form-item>
-           <n-button type="primary">保存</n-button>
+           
+           <div class="form-actions">
+             <n-button type="primary" @click="saveConfig" :loading="saving">保存</n-button>
+           </div>
         </n-form>
       </n-tab-pane>
     </n-tabs>
@@ -43,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
-import { NTabs, NTabPane, NDataTable, NButton, NTag, NForm, NFormItem, NInput, NInputNumber, NModal, useMessage } from 'naive-ui'
+import { ref, onMounted, h, reactive } from 'vue'
+import { NTabs, NTabPane, NDataTable, NButton, NTag, NForm, NFormItem, NInputNumber, NModal, NTimePicker, useMessage } from 'naive-ui'
 import axios from 'axios'
 
 const accounts = ref([])
@@ -52,6 +75,14 @@ const loading = ref(false)
 const showQrModal = ref(false)
 const qrCodeUrl = ref('')
 const message = useMessage()
+
+// Config State
+const config = reactive({
+  cron_times: ['08:00'],
+  rss_max_items: 20,
+  retention_days: 60
+})
+const saving = ref(false)
 
 const API_BASE = 'http://localhost:8000/api/v1'
 
@@ -80,17 +111,44 @@ const fetchAccounts = async () => {
   }
 }
 
+const fetchConfig = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/system/config`)
+    if (res.data) {
+        config.cron_times = res.data.cron_times || ['08:00']
+        config.rss_max_items = res.data.rss_max_items || 20
+        config.retention_days = res.data.retention_days || 60
+    }
+  } catch (e) {
+    message.error('加载配置失败')
+  }
+}
+
+const saveConfig = async () => {
+  saving.value = true
+  try {
+    await axios.post(`${API_BASE}/system/config`, config)
+    message.success('保存成功')
+  } catch (e) {
+    message.error('保存失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+const addTime = () => {
+  config.cron_times.push('12:00')
+}
+
+const removeTime = (index: number) => {
+  config.cron_times.splice(index, 1)
+}
+
 const startLogin = async () => {
     showQrModal.value = true
     try {
         const res = await axios.get(`${API_BASE}/auth/qrcode`)
-        // Assuming the backend returns a QR image URL or we render it
-        // For now, let's assume it returns a URL to a QR image
-        // In the mock, it returns a login URL string, we might need a qrcode generator lib in frontend if it's just a string
-        // But let's assume backend gives an image url for simplicity or we use a placeholder
         qrCodeUrl.value = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(res.data.qrcode_url)
-        
-        // Start polling status...
     } catch (e) {
         message.error('获取二维码失败')
     }
@@ -98,6 +156,7 @@ const startLogin = async () => {
 
 onMounted(() => {
   fetchAccounts()
+  fetchConfig()
 })
 </script>
 
@@ -112,5 +171,30 @@ onMounted(() => {
 }
 .toolbar {
   margin-bottom: 16px;
+}
+.time-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.time-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.index-label {
+  font-weight: bold;
+  width: 20px;
+  text-align: right;
+  color: #666;
+}
+.tip {
+    margin-left: 10px;
+    color: #999;
+    font-size: 12px;
+}
+.form-actions {
+    margin-top: 20px;
+    padding-left: 120px;
 }
 </style>

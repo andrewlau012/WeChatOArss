@@ -12,3 +12,4 @@ python-multipart>=0.0.9
 aiofiles>=23.2.1
 loguru>=0.7.2
 tenacity>=8.2.3
+playwright>=1.41.0

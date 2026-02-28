@@ -1,5 +1,5 @@
 
-FROM public.ecr.aws/docker/library/python:3.10-slim
+FROM mcr.microsoft.com/playwright/python:v1.41.0-jammy
 
 WORKDIR /app
 
@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# If using Playwright
-# RUN playwright install chromium
-# RUN playwright install-deps
+# Install Playwright browsers (already in base image, but deps might need update)
+RUN playwright install chromium
 
 COPY . .
 
